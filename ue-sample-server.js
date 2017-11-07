@@ -26,6 +26,11 @@ const routes = [
         methods: {
             'get': getHomepage
         }
+    }, {    //delete
+        rex: /^\/old-homepage\/{0,1}$/,
+        methods: {
+            'get': getOldHomepage
+        }
     }, {
         rex: /^\/simple-form\/{0,1}$/,
         methods: {
@@ -91,6 +96,14 @@ function getHomepage (req, res) {
     res.setHeader('Content-Type', 'text/html');
     res.statusCode = 200;
     res.write(layout({ title: "Startseite", bodyPartial: 'homepage'}));
+    res.end();
+}
+
+//delete
+function getOldHomepage (req, res) {
+    res.setHeader('Content-Type', 'text/html');
+    res.statusCode = 200;
+    res.write(layout({ title: "Startseite", bodyPartial: 'oldHomepage'}));
     res.end();
 }
 
@@ -325,6 +338,20 @@ hbs.registerPartial('500',
      <p>Zurück zur <a href="/">Startseite</a>.</p>`);
 
 hbs.registerPartial('homepage',
+    `<h1>UE3 about.me clone</h1>
+     <p>Create a page to present who you are and what you do in one link.</p>
+     <ul>
+        <li><a href="/old-homepage">Alte Homepage</a></li>  <!-- //delete -->
+        <li><a href="/persist-data">Profil anlegen</a></li>
+        <li><a href="/persisted-data">Gespeicherte Formulardaten</a></li>
+        <li><a href="/einfaches-html-form">Redirect Beispiel</a> 
+            <span class="subtle small">Bitte Browser-Weiterleitung im Netzwerk-Tab der Browser Devtools betrachten</span>
+        </li>
+        <li><a href="/image">Bildanzeige (File Upload)</a></li>
+     </ul>`);
+
+//delete
+hbs.registerPartial('oldHomepage',
     `<h1>UE3 Sample Server</h1>
      <ul>
         <li><a href="/simple-form">Einfaches Formular</a></li>
@@ -339,8 +366,13 @@ hbs.registerPartial('homepage',
 hbs.registerPartial('simple-html-form',
     `<h1>{{title}}</h1>
      <form action="{{action}}" method="post">
+        <p><label>Benutzerkürzel: <input type="text" name="nickname"></label></p> 
          <p><label>Vorname: <input type="text" name="firstname"></label></p>     
-         <p><label>Nachname: <input type="text" name="lastname"></label></p>     
+         <p><label>Nachname: <input type="text" name="lastname"></label></p> 
+          <p><textarea name="description" rows="10" cols="60">Fügen Sie hier Ihre Beschreibung ein.</textarea></p>
+          <p><label>Facebook Link: <input type="text" name="fblink"></label></p> 
+          <p><label>Twitter  Link: <input type="text" name="twlink"></label></p> 
+          <p><label>Xing Link: <input type="text" name="xilink"></label></p>    
          <p><button type="submit">Absenden</button></p>     
      </form>`);
 
