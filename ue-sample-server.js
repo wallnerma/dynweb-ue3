@@ -11,6 +11,12 @@ if (!fs.existsSync(imgDir)) {
     fs.mkdirSync(imgDir);
 }
 
+// Ensure data directory exists
+const dataDir = "./data/";
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir);
+}
+
 // -------
 // Routing
 // Routing is the mechanism of analyzing the request and
@@ -69,6 +75,11 @@ const routes = [
         methods: {
             'get': getImage
         }
+    }, {
+        rex: /^\/[0-9a-zA-Z]*\/{0,1}$/,
+        methods: {
+            'get': getUser
+        }
     }
 ];
 
@@ -107,6 +118,22 @@ function getOldHomepage (req, res) {
     res.end();
 }
 
+function getUser (req, res) {
+    const parsedUrl = url.parse(req.url);
+    let userName = parsedUrl.pathname.split("/")[1];
+    fs.readFile(dataDir + userName + '.json', 'utf8', (err, data) => {
+        if (err) throw err;
+        const fields = JSON.parse(data);
+
+        if (userName === fields.nickname) {
+            res.setHeader('Content-Type', 'text/html');
+            res.statusCode = 200;
+            res.write(layout({ title: userName + " - Profil", bodyPartial: 'persisted-data', data: fields }));
+            res.end();
+        }
+    })
+}
+
 // Handlers for showing how to process form data
 function getSimpleForm (req, res) {
     res.setHeader('Content-Type', 'text/html');
@@ -142,18 +169,18 @@ function postPersistDataForm (req, res) {
     var form = new formidable.IncomingForm();
     form.parse(req, function(err, fields, files) {
         // Store the data
-        fs.writeFile('person.json', JSON.stringify(fields), 'utf8', (err) => {
+        fs.writeFile(dataDir + fields.nickname + '.json', JSON.stringify(fields), 'utf8', (err) => {
             if (err) throw err;
             res.setHeader('Content-Type', 'text/html');
             res.setHeader('Location', "/persisted-data");
 
             // Note: sample server is sloppy and doesn't differentiate between the resource
             // just being created (resulting in 201) and it being changed (resulting in 200)
-            res.statusCode = 200;
+            res.statusCode = 201;
             res.write(layout({
                 title: "Ressource geändert",
                 bodyPartial: 'persist-data-form-success',
-                resourceUri: '/persisted-data'}));
+                resourceUri: fields.nickname}));
             res.end();
 
         });
@@ -389,14 +416,18 @@ hbs.registerPartial('simple-html-form-success',
      </p>`);
 
 hbs.registerPartial('persist-data-form-success',
-    `<h1>Eingaben gespeichert</h1>
-     <p>Weiter geht's <a href="{{resourceUri}}">hier</a>.</p>`);
+    `<h1>Your account has been added!</h1>
+     <p>Link to your newly created <a href="{{resourceUri}}">userprofile</a>.</p>`);
 
 hbs.registerPartial('persisted-data',
     `<h1>Persistierte Daten</h1>
      <ul>
      {{#each data}}
-        <li>{{@key}}: {{this}}</li>
+        {{#isLink @key }}
+            <li>{{@key}}: <a href={{this}}>{{this}}</a></li>
+        {{else}}
+            <li>{{@key}}: {{this}}</li>
+        {{/isLink}}
      {{/each}}
      </ul>
      <p><a href="/persist-data">Ändern &raquo;</a></p>`);
@@ -418,6 +449,17 @@ hbs.registerPartial('image-view',
      <p><img src="{{imgSrc}}" alt="Noch kein Bild vorhanden" style="width: 32em;"></p>
      <a href="/image/upload">Upload&nbsp;&raquo;</a>
     `);
+
+// --------------
+// Helper
+
+hbs.registerHelper("isLink", function (name, options) {
+    if (name === "fblink" || name === "twlink" || name === "xilink"){
+        return options.fn(this);
+    } else {
+        return options.inverse(this);
+    }
+});
 
 // ---------------
 // Server Creation
