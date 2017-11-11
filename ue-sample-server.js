@@ -44,7 +44,7 @@ const routes = [
             'post': postSimpleForm
         }
     }, {
-        rex: /^\/persist-data\/{0,1}$/,
+        rex: /^\/new\/{0,1}$/,
         methods: {
             'get': getPersistDataForm,
             'post': postPersistDataForm
@@ -76,7 +76,7 @@ const routes = [
             'get': getImage
         }
     }, {
-        rex: /^\/[0-9a-zA-Z]*\/{0,1}$/,
+        rex: /^\/[0-9a-zA-Z-_]*\/{0,1}$/,
         methods: {
             'get': getUser
         }
@@ -122,14 +122,21 @@ function getUser (req, res) {
     const parsedUrl = url.parse(req.url);
     let userName = parsedUrl.pathname.split("/")[1];
     fs.readFile(dataDir + userName + '.json', 'utf8', (err, data) => {
-        if (err) throw err;
-        const fields = JSON.parse(data);
+        if (err) {
+            get404(req, res);
+        }
+        else {
+            const fields = JSON.parse(data);
 
-        if (userName === fields.nickname) {
-            res.setHeader('Content-Type', 'text/html');
-            res.statusCode = 200;
-            res.write(layout({ title: userName + " - Profil", bodyPartial: 'persisted-data', data: fields }));
-            res.end();
+            if (userName === fields.nickname) {
+                res.setHeader('Content-Type', 'text/html');
+                res.statusCode = 200;
+                res.write(layout({title: userName + " - Profil", bodyPartial: 'persisted-data', data: fields}));
+                res.end();
+
+            } else {
+                get404(req, res);
+            }
         }
     })
 }
@@ -146,12 +153,12 @@ function postSimpleForm (req, res) {
     var form = new formidable.IncomingForm();
     form.parse(req, (err, fields, files) => {
         res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Location', "/uri-to-new-resource");
+        res.setHeader('Location', "/" + fields.nickname);
         res.statusCode = 201;
         res.write(layout({
             title: "Ressource erzeugt",
             bodyPartial: 'simple-html-form-success',
-            resourceUri: '/uri-to-new-resource',
+            resourceUri: '/' + fields.nickname,
             requestBody: util.inspect(fields)}));
         res.end();
     });
@@ -161,7 +168,7 @@ function postSimpleForm (req, res) {
 function getPersistDataForm (req, res) {
     res.setHeader('Content-Type', 'text/html');
     res.statusCode = 200;
-    res.write(layout({ title: "HTML Formular Daten persistieren", bodyPartial: 'simple-html-form', action: '/persist-data'}));
+    res.write(layout({ title: "HTML Formular Daten persistieren", bodyPartial: 'simple-html-form', action: '/new'}));
     res.end();
 }
 
@@ -172,7 +179,7 @@ function postPersistDataForm (req, res) {
         fs.writeFile(dataDir + fields.nickname + '.json', JSON.stringify(fields), 'utf8', (err) => {
             if (err) throw err;
             res.setHeader('Content-Type', 'text/html');
-            res.setHeader('Location', "/persisted-data");
+            res.setHeader('Location', "/" + fields.nickname);
 
             // Note: sample server is sloppy and doesn't differentiate between the resource
             // just being created (resulting in 201) and it being changed (resulting in 200)
@@ -369,12 +376,7 @@ hbs.registerPartial('homepage',
      <p>Create a page to present who you are and what you do in one link.</p>
      <ul>
         <li><a href="/old-homepage">Alte Homepage</a></li>  <!-- //delete -->
-        <li><a href="/persist-data">Profil anlegen</a></li>
-        <li><a href="/persisted-data">Gespeicherte Formulardaten</a></li>
-        <li><a href="/einfaches-html-form">Redirect Beispiel</a> 
-            <span class="subtle small">Bitte Browser-Weiterleitung im Netzwerk-Tab der Browser Devtools betrachten</span>
-        </li>
-        <li><a href="/image">Bildanzeige (File Upload)</a></li>
+        <li><a href="/new">Profil anlegen</a></li>
      </ul>`);
 
 //delete
@@ -420,11 +422,11 @@ hbs.registerPartial('persist-data-form-success',
      <p>Link to your newly created <a href="{{resourceUri}}">userprofile</a>.</p>`);
 
 hbs.registerPartial('persisted-data',
-    `<h1>Persistierte Daten</h1>
+    `<h2>Userprofile:</h2>
      <ul>
      {{#each data}}
         {{#isLink @key }}
-            <li>{{@key}}: <a href={{this}}>{{this}}</a></li>
+            <li>{{@key}}: <a href="http://{{this}}">{{this}}</a></li>
         {{else}}
             <li>{{@key}}: {{this}}</li>
         {{/isLink}}
