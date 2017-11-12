@@ -168,7 +168,7 @@ function postSimpleForm (req, res) {
 function getPersistDataForm (req, res) {
     res.setHeader('Content-Type', 'text/html');
     res.statusCode = 200;
-    res.write(layout({ title: "HTML Formular Daten persistieren", bodyPartial: 'simple-html-form', action: '/new'}));
+    res.write(layout({ title: "Create a new user account", bodyPartial: 'simple-html-form', action: '/new'}));
     res.end();
 }
 
@@ -183,7 +183,7 @@ function postPersistDataForm (req, res) {
 
             // Note: sample server is sloppy and doesn't differentiate between the resource
             // just being created (resulting in 201) and it being changed (resulting in 200)
-            res.statusCode = 201;
+            res.statusCode = 303;
             res.write(layout({
                 title: "Ressource geändert",
                 bodyPartial: 'persist-data-form-success',

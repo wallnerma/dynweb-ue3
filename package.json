@@ -4,8 +4,8 @@
   "description": "FH Joanneum Kapfenberg, Software Design, Dynamic Web sample server for exercise 3",
   "main": "ue-sample-server.js",
   "dependencies": {
-    "formidable": "^1.0.17",
-    "handlebars": "^4.0.6"
+    "formidable": "^1.1.1",
+    "handlebars": "^4.0.11"
   },
   "devDependencies": {},
   "scripts": {
