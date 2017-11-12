@@ -80,6 +80,11 @@ const routes = [
         methods: {
             'get': getUser
         }
+    }, {
+        rex: /^\/[0-9a-zA-Z-_]*\/edit\/{0,1}$/,
+        methods: {
+            'get': getEditUser
+        }
     }
 ];
 
@@ -201,6 +206,18 @@ function getPersistedData (req, res) {
         res.setHeader('Content-Type', 'text/html');
         res.statusCode = 200;
         res.write(layout({ title: "Zuletzt persistierte Daten", bodyPartial: 'persisted-data', data: fields }));
+        res.end();
+    })
+}
+
+function getEditUser (req, res) {
+    const parsedUrl = url.parse(req.url);
+    fs.readFile('./data/' + parsedUrl.pathname.split("/")[1] + '.json', 'utf8', (err, data) => {
+        if (err) throw err;
+        const fields = JSON.parse(data);
+        res.setHeader('Content-Type', 'text/html');
+        res.statusCode = 200;
+        res.write(layout({ title: "Edit User", bodyPartial: 'edit-form',action: fields.nickname + '/edit', nickname: fields.nickname }));
         res.end();
     })
 }
@@ -396,6 +413,19 @@ hbs.registerPartial('simple-html-form',
     `<h1>{{title}}</h1>
      <form action="{{action}}" method="post">
         <p><label>Benutzerkürzel: <input type="text" name="nickname"></label></p> 
+         <p><label>Vorname: <input type="text" name="firstname"></label></p>     
+         <p><label>Nachname: <input type="text" name="lastname"></label></p> 
+          <p><textarea name="description" rows="10" cols="60">Fügen Sie hier Ihre Beschreibung ein.</textarea></p>
+          <p><label>Facebook Link: <input type="text" name="fblink"></label></p> 
+          <p><label>Twitter  Link: <input type="text" name="twlink"></label></p> 
+          <p><label>Xing Link: <input type="text" name="xilink"></label></p>    
+         <p><button type="submit">Absenden</button></p>     
+     </form>`);
+
+hbs.registerPartial('edit-form',
+    `<h1>{{title}}</h1>
+     <form action="{{action}}" method="post">
+        <p><label>Benutzerkürzel: <input type="text" name="nickname" value = {{nickname}}></label></p> 
          <p><label>Vorname: <input type="text" name="firstname"></label></p>     
          <p><label>Nachname: <input type="text" name="lastname"></label></p> 
           <p><textarea name="description" rows="10" cols="60">Fügen Sie hier Ihre Beschreibung ein.</textarea></p>
