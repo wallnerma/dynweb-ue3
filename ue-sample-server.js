@@ -135,7 +135,18 @@ function getUser (req, res) {
             const fields = JSON.parse(data);
 
             if (userName === fields.nickname) {
+
+                console.log(req.headers);
+
+                if(fields.ModifiedDate === req.headers)
+                {
+                    res.setHeader('Content-Type', 'text/html');
+                    res.statusCode = 304;
+                    res.end();
+                }
+
                 res.setHeader('Content-Type', 'text/html');
+                res.setHeader('Last-Modified', fields.ModifiedDate);
                 res.statusCode = 200;
                 res.write(layout({title: userName + " - Profil", bodyPartial: 'persisted-data', data: fields, nickname: fields.nickname}));
                 res.end();
@@ -184,10 +195,7 @@ function postPersistDataForm (req, res) {
 
         //Add Last-Modified Date
         let lastModifiedDate = new Date().toUTCString();
-        fields.add({
-            LastModified: lastModifiedDate
-        });
-        console.log(fields);
+        fields.ModifiedDate = lastModifiedDate;
 
         // Store the data
         fs.writeFile(dataDir + fields.nickname + '.json', JSON.stringify(fields), 'utf8', (err) => {
@@ -213,7 +221,7 @@ function getPersistedData (req, res) {
         if (err) throw err;
         const fields = JSON.parse(data);
         res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Last-Modified', lastModifiedDate);
+        res.setHeader('Last-Modified', fields.ModifiedDate);
         res.statusCode = 200;
         res.write(layout({ title: "Zuletzt persistierte Daten", bodyPartial: 'persisted-data', data: fields , nickname: fields.nickname}));
         res.end();
