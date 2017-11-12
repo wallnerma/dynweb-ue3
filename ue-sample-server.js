@@ -83,7 +83,8 @@ const routes = [
     }, {
         rex: /^\/[0-9a-zA-Z-_]*\/edit\/{0,1}$/,
         methods: {
-            'get': getEditUser
+            'get': getEditUser,
+            'post': postPersistDataForm
         }
     }
 ];
@@ -136,7 +137,7 @@ function getUser (req, res) {
             if (userName === fields.nickname) {
                 res.setHeader('Content-Type', 'text/html');
                 res.statusCode = 200;
-                res.write(layout({title: userName + " - Profil", bodyPartial: 'persisted-data', data: fields}));
+                res.write(layout({title: userName + " - Profil", bodyPartial: 'persisted-data', data: fields, nickname: fields.nickname}));
                 res.end();
 
             } else {
@@ -205,19 +206,27 @@ function getPersistedData (req, res) {
         const fields = JSON.parse(data);
         res.setHeader('Content-Type', 'text/html');
         res.statusCode = 200;
-        res.write(layout({ title: "Zuletzt persistierte Daten", bodyPartial: 'persisted-data', data: fields }));
+        res.write(layout({ title: "Zuletzt persistierte Daten", bodyPartial: 'persisted-data', data: fields , nickname: fields.nickname}));
         res.end();
     })
 }
 
 function getEditUser (req, res) {
     const parsedUrl = url.parse(req.url);
-    fs.readFile('./data/' + parsedUrl.pathname.split("/")[1] + '.json', 'utf8', (err, data) => {
+    fs.readFile(dataDir + parsedUrl.pathname.split("/")[1] + '.json', 'utf8', (err, data) => {
         if (err) throw err;
         const fields = JSON.parse(data);
         res.setHeader('Content-Type', 'text/html');
         res.statusCode = 200;
-        res.write(layout({ title: "Edit User", bodyPartial: 'edit-form',action: fields.nickname + '/edit', nickname: fields.nickname }));
+        res.write(layout({ title: "Edit User", bodyPartial: 'edit-form',action: 'edit/',
+                            nickname: fields.nickname ,
+                            firstname: fields.firstname ,
+                            lastname: fields.lastname,
+                            description: fields.description,
+                            fblink: fields.fblink,
+                            twlink: fields.twlink,
+                            xilink: fields.xilink
+                            }));
         res.end();
     })
 }
@@ -425,13 +434,13 @@ hbs.registerPartial('simple-html-form',
 hbs.registerPartial('edit-form',
     `<h1>{{title}}</h1>
      <form action="{{action}}" method="post">
-        <p><label>Benutzerkürzel: <input type="text" name="nickname" value = {{nickname}}></label></p> 
-         <p><label>Vorname: <input type="text" name="firstname"></label></p>     
-         <p><label>Nachname: <input type="text" name="lastname"></label></p> 
-          <p><textarea name="description" rows="10" cols="60">Fügen Sie hier Ihre Beschreibung ein.</textarea></p>
-          <p><label>Facebook Link: <input type="text" name="fblink"></label></p> 
-          <p><label>Twitter  Link: <input type="text" name="twlink"></label></p> 
-          <p><label>Xing Link: <input type="text" name="xilink"></label></p>    
+        <p><label>Benutzerkürzel: <input type="text" name="nickname" value = {{nickname}} readonly></label></p> 
+         <p><label>Vorname: <input type="text" name="firstname" value = {{firstname}}></label></p>     
+         <p><label>Nachname: <input type="text" name="lastname" value = {{lastname}}></label></p> 
+          <p><textarea name="description" rows="10" cols="60">{{description}}</textarea></p>
+          <p><label>Facebook Link: <input type="text" name="fblink" value = {{fblink}}></label></p> 
+          <p><label>Twitter  Link: <input type="text" name="twlink" value = {{twlink}}></label></p> 
+          <p><label>Xing Link: <input type="text" name="xilink" value = {{xilink}}></label></p>    
          <p><button type="submit">Absenden</button></p>     
      </form>`);
 
@@ -462,7 +471,7 @@ hbs.registerPartial('persisted-data',
         {{/isLink}}
      {{/each}}
      </ul>
-     <p><a href="/persist-data">Ändern &raquo;</a></p>`);
+     <p><a href="{{nickname}}/edit">Edit &raquo;</a></p>`);
 
 
 hbs.registerPartial('image-upload-form',
