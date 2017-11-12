@@ -181,11 +181,20 @@ function getPersistDataForm (req, res) {
 function postPersistDataForm (req, res) {
     var form = new formidable.IncomingForm();
     form.parse(req, function(err, fields, files) {
+
+        //Add Last-Modified Date
+        let lastModifiedDate = new Date().toUTCString();
+        fields.add({
+            LastModified: lastModifiedDate
+        });
+        console.log(fields);
+
         // Store the data
         fs.writeFile(dataDir + fields.nickname + '.json', JSON.stringify(fields), 'utf8', (err) => {
             if (err) throw err;
             res.setHeader('Content-Type', 'text/html');
             res.setHeader('Location', "/" + fields.nickname);
+            res.setHeader('Last-Modified', lastModifiedDate);
 
             // Note: sample server is sloppy and doesn't differentiate between the resource
             // just being created (resulting in 201) and it being changed (resulting in 200)
@@ -195,7 +204,6 @@ function postPersistDataForm (req, res) {
                 bodyPartial: 'persist-data-form-success',
                 resourceUri: fields.nickname}));
             res.end();
-
         });
     });
 }
@@ -205,6 +213,7 @@ function getPersistedData (req, res) {
         if (err) throw err;
         const fields = JSON.parse(data);
         res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Last-Modified', lastModifiedDate);
         res.statusCode = 200;
         res.write(layout({ title: "Zuletzt persistierte Daten", bodyPartial: 'persisted-data', data: fields , nickname: fields.nickname}));
         res.end();
