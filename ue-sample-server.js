@@ -127,6 +127,13 @@ function getOldHomepage (req, res) {
 function getUser (req, res) {
     const parsedUrl = url.parse(req.url);
     let userName = parsedUrl.pathname.split("/")[1];
+    let imgSrc = "";
+    fs.readdir(imgDir, (err, files) => {
+        const file = files.find(f => f.startsWith(userName));
+        imgSrc = file ? `../images/${file.toLowerCase()}` : "";
+        console.log(imgSrc);
+    });
+
     fs.readFile(dataDir + userName + '.json', 'utf8', (err, data) => {
         if (err) {
             get404(req, res);
@@ -146,14 +153,14 @@ function getUser (req, res) {
                 res.setHeader('Content-Type', 'text/html');
                 res.setHeader('Last-Modified', fields.ModifiedDate);
                 res.statusCode = 200;
-                res.write(layout({title: userName + " - Profil", bodyPartial: 'persisted-data', data: fields, nickname: fields.nickname}));
+                res.write(layout({title: userName + " - Profil", bodyPartial: 'persisted-data', data: fields, nickname: fields.nickname, imgSrc: imgSrc}));
                 res.end();
 
             } else {
                 get404(req, res);
             }
         }
-    })
+    });
 }
 
 // Handlers for showing how to process form data
@@ -188,12 +195,20 @@ function getPersistDataForm (req, res) {
 }
 
 function postPersistDataForm (req, res) {
+
     var form = new formidable.IncomingForm();
+        form.keepExtensions = true;
+        form.uploadDir = imgDir;
     form.parse(req, function(err, fields, files) {
 
         //Add Last-Modified Date
         let lastModifiedDate = new Date().toUTCString();
         fields.ModifiedDate = lastModifiedDate;
+
+        //Upload Image
+        const fileName = files.imagefile.name;
+        const currentPath = files.imagefile.path;
+        fs.renameSync(currentPath, form.uploadDir + fields.nickname + getFileExt(fileName).toLowerCase());
 
         // Store the data
         fs.writeFile(dataDir + fields.nickname + '.json', JSON.stringify(fields), 'utf8', (err) => {
@@ -286,10 +301,10 @@ function postImageUploadForm (req, res) {
 
 function getImage (req, res) {
     const parsedUrl = url.parse(req.url);
-
+    let userName = parsedUrl.pathname.split("/")[1];
     // Hint: due to our routing configuration we assume that path ends in
     // something along the lines of 'image.jpg'.
-    const result = /image\.(jpg|jpeg|png)$/.exec(parsedUrl.pathname);
+    const result = /$(userName)\.(jpg|jpeg|png)$/.exec(parsedUrl.pathname);
     const fileName = result[0];
     const fileExt = result[1];
     if (fileName) {
@@ -435,14 +450,19 @@ hbs.registerPartial('oldHomepage',
 
 hbs.registerPartial('simple-html-form',
     `<h1>{{title}}</h1>
-     <form action="{{action}}" method="post">
+     <form action="{{action}}" method="post" enctype="multipart/form-data">
         <p><label>Benutzerkürzel: <input type="text" name="nickname"></label></p> 
          <p><label>Vorname: <input type="text" name="firstname"></label></p>     
          <p><label>Nachname: <input type="text" name="lastname"></label></p> 
           <p><textarea name="description" rows="10" cols="60">Fügen Sie hier Ihre Beschreibung ein.</textarea></p>
           <p><label>Facebook Link: <input type="text" name="fblink"></label></p> 
           <p><label>Twitter  Link: <input type="text" name="twlink"></label></p> 
-          <p><label>Xing Link: <input type="text" name="xilink"></label></p>    
+          <p><label>Xing Link: <input type="text" name="xilink"></label></p>   
+         <p><label>Bild: 
+                <input type="file" accept="image/jpeg, image/png" name="imagefile">
+            </label>
+          </p>
+         <p class="subtle small">Erlaubte Bildformate: JPEG und PNG!</p>         
          <p><button type="submit">Absenden</button></p>     
      </form>`);
 
@@ -478,13 +498,14 @@ hbs.registerPartial('persist-data-form-success',
 hbs.registerPartial('persisted-data',
     `<h2>Userprofile:</h2>
      <ul>
+     <li><img src="{{imgSrc}}" alt="Noch kein Bild vorhanden" style="width: 32em;"></li>
      {{#each data}}
         {{#isLink @key }}
             <li>{{@key}}: <a href="http://{{this}}">{{this}}</a></li>
         {{else}}
             <li>{{@key}}: {{this}}</li>
         {{/isLink}}
-     {{/each}}
+     {{/each}}     
      </ul>
      <p><a href="{{nickname}}/edit">Edit &raquo;</a></p>`);
 
@@ -508,7 +529,6 @@ hbs.registerPartial('image-view',
 
 // --------------
 // Helper
-
 hbs.registerHelper("isLink", function (name, options) {
     if (name === "fblink" || name === "twlink" || name === "xilink"){
         return options.fn(this);
