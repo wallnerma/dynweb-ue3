@@ -136,9 +136,7 @@ function getUser (req, res) {
 
             if (userName === fields.nickname) {
 
-                console.log(req.headers);
-
-                if(fields.ModifiedDate === req.headers)
+                if(req.headers["if-modified-since"] && fields.ModifiedDate === req.headers["if-modified-since"])
                 {
                     res.setHeader('Content-Type', 'text/html');
                     res.statusCode = 304;
