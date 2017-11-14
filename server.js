@@ -66,9 +66,9 @@ const routes = [
             'post': postImageUploadForm
         }
     }, {
-        rex: /^\/image\/{0,1}$/,
+        rex: /^\/images\/[0-9a-zA-Z-_]*\.(jpg|jpeg|png)\/{0,1}$/,
         methods: {
-            'get': getImageView
+            'get': getImage
         }
     }, {
         rex: /^\/images\/image\.(jpg|jpeg|png)$/,
@@ -127,13 +127,24 @@ function getOldHomepage (req, res) {
 function getUser (req, res) {
     const parsedUrl = url.parse(req.url);
     let userName = parsedUrl.pathname.split("/")[1];
+
+    //Get the Users Image File
     let imgSrc = "";
+
     fs.readdir(imgDir, (err, files) => {
+        console.log("getUser userName: " + userName);
+
+        //let regex = new RegExp("#" + userName + "#");
+        //console.log("getUser regex: " + regex);
+
         const file = files.find(f => f.startsWith(userName));
-        imgSrc = file ? `../images/${file.toLowerCase()}` : "";
-        console.log(imgSrc);
+        console.log("getUser file: " + file);
+
+        imgSrc = file ? `/images/${file.toLowerCase()}` : "";
+        console.log("getUser imgSrc: " + imgSrc + "\n");
     });
 
+    //Get the Users JSON File
     fs.readFile(dataDir + userName + '.json', 'utf8', (err, data) => {
         if (err) {
             get404(req, res);
@@ -142,25 +153,27 @@ function getUser (req, res) {
             const fields = JSON.parse(data);
 
             if (userName === fields.nickname) {
-
                 if(req.headers["if-modified-since"] && fields.ModifiedDate === req.headers["if-modified-since"])
                 {
                     res.setHeader('Content-Type', 'text/html');
                     res.statusCode = 304;
                     res.end();
+                } else {
+                    res.setHeader('Content-Type', 'text/html');
+                    res.setHeader('Last-Modified', fields.ModifiedDate);
+                    res.statusCode = 200;
+                    res.write(layout({title: userName + " - Profil", bodyPartial: 'persisted-data', data: fields, nickname: fields.nickname, imgSrc: imgSrc}));
+                    res.end();
                 }
-
-                res.setHeader('Content-Type', 'text/html');
-                res.setHeader('Last-Modified', fields.ModifiedDate);
-                res.statusCode = 200;
-                res.write(layout({title: userName + " - Profil", bodyPartial: 'persisted-data', data: fields, nickname: fields.nickname, imgSrc: imgSrc}));
-                res.end();
-
             } else {
                 get404(req, res);
             }
         }
     });
+
+
+
+
 }
 
 // Handlers for showing how to process form data
@@ -199,7 +212,7 @@ function postPersistDataForm (req, res) {
     var form = new formidable.IncomingForm();
         form.keepExtensions = true;
         form.uploadDir = imgDir;
-    form.parse(req, function(err, fields, files) {
+        form.parse(req, function(err, fields, files) {
 
         //Add Last-Modified Date
         let lastModifiedDate = new Date().toUTCString();
@@ -263,12 +276,19 @@ function getEditUser (req, res) {
 
 // Handlers for file upload showcase
 function getImageView (req, res) {
+    const parsedUrl = url.parse(req.url);
+    let imageName = parsedUrl.pathname.split("/")[2];
+    console.log("getImageView userName: " + imageName);
     fs.readdir(imgDir, (err, files) => {
-        const file = files.find(f => f.startsWith("image"));
-        const imgSrc = file ? `/images/${file.toLowerCase()}` : "";
+
+        const file = files.find(f => f.startsWith(imageName));
+        console.log("getImageView file: " + file);
+
+        let imgSrc = file ? `/images/${file.toLowerCase()}` : "";
+        console.log("getImageView imgSrc: " + imgSrc + "\n");
 
         res.setHeader('Content-Type', 'text/html');
-        res.write(layout({ title: "Bildanzeige", bodyPartial: 'image-view', imgSrc: imgSrc}));
+        res.write(layout({ title: "Profile Picture", bodyPartial: 'image-view', imgSrc: imgSrc}));
         res.statusCode = 200;
         res.end();
     });
@@ -294,19 +314,25 @@ function postImageUploadForm (req, res) {
 
         // Post-Redirect-Get pattern
         res.statusCode = 303;
-        res.setHeader('Location', '/image');
+        res.setHeader('Location', '/images');
         res.end();
     });
 }
 
 function getImage (req, res) {
     const parsedUrl = url.parse(req.url);
-    let userName = parsedUrl.pathname.split("/")[1];
+    //let imageName = parsedUrl.pathname.split("/")[2];
+    //console.log("getImage imageName: " + imageName);
     // Hint: due to our routing configuration we assume that path ends in
     // something along the lines of 'image.jpg'.
-    const result = /$(userName)\.(jpg|jpeg|png)$/.exec(parsedUrl.pathname);
-    const fileName = result[0];
-    const fileExt = result[1];
+    //const result = /[a-zA-Z]*\.(jpg|jpeg|png)$/.exec(parsedUrl.pathname);
+
+    const fileName = parsedUrl.pathname.split("/")[2];
+    console.log("getImage fileName: " + fileName);
+
+    const fileExt = fileName.split(".")[1];
+    console.log("getImage fileExt: " + fileExt);
+
     if (fileName) {
         fs.readFile(imgDir + "/" + fileName, '', (err, data) => {
             if (err) {
@@ -524,7 +550,7 @@ hbs.registerPartial('image-upload-form',
 hbs.registerPartial('image-view',
     `<h1>{{title}}</h1>
      <p><img src="{{imgSrc}}" alt="Noch kein Bild vorhanden" style="width: 32em;"></p>
-     <a href="/image/upload">Upload&nbsp;&raquo;</a>
+     <!-- <a href="/image/upload">Upload&nbsp;&raquo;</a> -->
     `);
 
 // --------------

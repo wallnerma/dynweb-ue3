@@ -2,3 +2,5 @@ node_modules/*
 .idea
 person.json
 data/*
+images/*
+test.html
