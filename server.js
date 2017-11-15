@@ -256,6 +256,24 @@ function getPersistedData (req, res) {
 
 function getEditUser (req, res) {
     const parsedUrl = url.parse(req.url);
+    let userName = parsedUrl.pathname.split("/")[1];
+
+    //Get the Users Image File
+    let imgSrc = "";
+
+    fs.readdir(imgDir, (err, files) => {
+        console.log("getUser userName: " + userName);
+
+        //let regex = new RegExp("#" + userName + "#");
+        //console.log("getUser regex: " + regex);
+
+        const file = files.find(f => f.startsWith(userName));
+        console.log("getUser file: " + file);
+
+        imgSrc = file ? `/images/${file.toLowerCase()}` : "";
+        console.log("getUser imgSrc: " + imgSrc + "\n");
+    });
+
     fs.readFile(dataDir + parsedUrl.pathname.split("/")[1] + '.json', 'utf8', (err, data) => {
         if (err) throw err;
         const fields = JSON.parse(data);
@@ -268,7 +286,8 @@ function getEditUser (req, res) {
                             description: fields.description,
                             fblink: fields.fblink,
                             twlink: fields.twlink,
-                            xilink: fields.xilink
+                            xilink: fields.xilink,
+                            imgSrc: imgSrc
                             }));
         res.end();
     })
@@ -494,15 +513,22 @@ hbs.registerPartial('simple-html-form',
 
 hbs.registerPartial('edit-form',
     `<h1>{{title}}</h1>
-     <form action="{{action}}" method="post">
+     <form action="{{action}}" method="post" enctype="multipart/form-data">
+        <img src="{{imgSrc}}" alt="Noch kein Bild vorhanden" style="width: 10em;">
+        <p>
+            <label>Bild: 
+                <input type="file" accept="image/jpeg, image/png" name="imagefile">
+            </label>
+        </p>
+        <p class="subtle small">Erlaubte Bildformate: JPEG und PNG!</p>
         <p><label>Benutzerkürzel: <input type="text" name="nickname" value = {{nickname}} readonly></label></p> 
-         <p><label>Vorname: <input type="text" name="firstname" value = {{firstname}}></label></p>     
-         <p><label>Nachname: <input type="text" name="lastname" value = {{lastname}}></label></p> 
-          <p><textarea name="description" rows="10" cols="60">{{description}}</textarea></p>
-          <p><label>Facebook Link: <input type="text" name="fblink" value = {{fblink}}></label></p> 
-          <p><label>Twitter  Link: <input type="text" name="twlink" value = {{twlink}}></label></p> 
-          <p><label>Xing Link: <input type="text" name="xilink" value = {{xilink}}></label></p>    
-         <p><button type="submit">Absenden</button></p>     
+        <p><label>Vorname: <input type="text" name="firstname" value = {{firstname}}></label></p>     
+        <p><label>Nachname: <input type="text" name="lastname" value = {{lastname}}></label></p> 
+        <p><textarea name="description" rows="10" cols="60">{{description}}</textarea></p>
+        <p><label>Facebook Link: <input type="text" name="fblink" value = {{fblink}}></label></p> 
+        <p><label>Twitter  Link: <input type="text" name="twlink" value = {{twlink}}></label></p> 
+        <p><label>Xing Link: <input type="text" name="xilink" value = {{xilink}}></label></p>      
+        <p><button type="submit">Absenden</button></p>     
      </form>`);
 
 hbs.registerPartial('simple-html-form-success',
@@ -524,7 +550,8 @@ hbs.registerPartial('persist-data-form-success',
 hbs.registerPartial('persisted-data',
     `<h2>Userprofile:</h2>
      <ul>
-     <li><img src="{{imgSrc}}" alt="Noch kein Bild vorhanden" style="width: 32em;"></li>
+     <img src="{{imgSrc}}" alt="Noch kein Bild vorhanden" style="width: 12em;">
+     <br /><br />
      {{#each data}}
         {{#isLink @key }}
             <li>{{@key}}: <a href="http://{{this}}">{{this}}</a></li>
@@ -550,7 +577,6 @@ hbs.registerPartial('image-upload-form',
 hbs.registerPartial('image-view',
     `<h1>{{title}}</h1>
      <p><img src="{{imgSrc}}" alt="Noch kein Bild vorhanden" style="width: 32em;"></p>
-     <!-- <a href="/image/upload">Upload&nbsp;&raquo;</a> -->
     `);
 
 // --------------
