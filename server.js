@@ -19,29 +19,11 @@ if (!fs.existsSync(dataDir)) {
 
 // -------
 // Routing
-// Routing is the mechanism of analyzing the request and
-// forwarding it to the right receiver, in our case a function
-// that then produces the proper response.
-//
-// How to use?
-// A path is defined by a regular expression.
-// Methods shall be lowercase.
 const routes = [
     {
         rex: /^\/$/,
         methods: {
             'get': getHomepage
-        }
-    }, {    //delete
-        rex: /^\/old-homepage\/{0,1}$/,
-        methods: {
-            'get': getOldHomepage
-        }
-    }, {
-        rex: /^\/simple-form\/{0,1}$/,
-        methods: {
-            'get': getSimpleForm,
-            'post': postSimpleForm
         }
     }, {
         rex: /^\/new\/{0,1}$/,
@@ -50,28 +32,7 @@ const routes = [
             'post': postPersistDataForm
         }
     }, {
-        rex: /^\/persisted-data\/{0,1}$/,
-        methods: {
-            'get': getPersistedData,
-        }
-    }, {
-        rex: /^\/einfaches-html-form\/{0,1}$/,
-        methods: {
-            'get': getRedirectBrowser,
-        }
-    }, {
-        rex: /^\/image\/upload\/{0,1}$/,
-        methods: {
-            'get': getImageUploadForm,
-            'post': postImageUploadForm
-        }
-    }, {
         rex: /^\/images\/[0-9a-zA-Z-_]*\.(jpg|jpeg|png)\/{0,1}$/,
-        methods: {
-            'get': getImage
-        }
-    }, {
-        rex: /^\/images\/image\.(jpg|jpeg|png)$/,
         methods: {
             'get': getImage
         }
@@ -116,21 +77,12 @@ function getHomepage (req, res) {
     res.end();
 }
 
-//delete
-function getOldHomepage (req, res) {
-    res.setHeader('Content-Type', 'text/html');
-    res.statusCode = 200;
-    res.write(layout({ title: "Startseite", bodyPartial: 'oldHomepage'}));
-    res.end();
-}
-
 function getUser (req, res) {
     const parsedUrl = url.parse(req.url);
     let userName = parsedUrl.pathname.split("/")[1];
 
     //Get the Users Image File
     let imgSrc = "";
-
     fs.readdir(imgDir, (err, files) => {
         console.log("getUser userName: " + userName);
 
@@ -170,36 +122,8 @@ function getUser (req, res) {
             }
         }
     });
-
-
-
-
 }
 
-// Handlers for showing how to process form data
-function getSimpleForm (req, res) {
-    res.setHeader('Content-Type', 'text/html');
-    res.statusCode = 200;
-    res.write(layout({ title: "Simples HTML Formular", bodyPartial: 'simple-html-form', action: '/simple-form'}));
-    res.end();
-}
-
-function postSimpleForm (req, res) {
-    var form = new formidable.IncomingForm();
-    form.parse(req, (err, fields, files) => {
-        res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Location', "/" + fields.nickname);
-        res.statusCode = 201;
-        res.write(layout({
-            title: "Ressource erzeugt",
-            bodyPartial: 'simple-html-form-success',
-            resourceUri: '/' + fields.nickname,
-            requestBody: util.inspect(fields)}));
-        res.end();
-    });
-}
-
-// Handlers for showing how to persist form data
 function getPersistDataForm (req, res) {
     res.setHeader('Content-Type', 'text/html');
     res.statusCode = 200;
@@ -208,7 +132,6 @@ function getPersistDataForm (req, res) {
 }
 
 function postPersistDataForm (req, res) {
-
     var form = new formidable.IncomingForm();
         form.keepExtensions = true;
         form.uploadDir = imgDir;
@@ -229,9 +152,6 @@ function postPersistDataForm (req, res) {
             res.setHeader('Content-Type', 'text/html');
             res.setHeader('Location', "/" + fields.nickname);
             res.setHeader('Last-Modified', lastModifiedDate);
-
-            // Note: sample server is sloppy and doesn't differentiate between the resource
-            // just being created (resulting in 201) and it being changed (resulting in 200)
             res.statusCode = 303;
             res.write(layout({
                 title: "Ressource geändert",
@@ -242,36 +162,15 @@ function postPersistDataForm (req, res) {
     });
 }
 
-function getPersistedData (req, res) {
-    fs.readFile('person.json', 'utf8', (err, data) => {
-        if (err) throw err;
-        const fields = JSON.parse(data);
-        res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Last-Modified', fields.ModifiedDate);
-        res.statusCode = 200;
-        res.write(layout({ title: "Zuletzt persistierte Daten", bodyPartial: 'persisted-data', data: fields , nickname: fields.nickname}));
-        res.end();
-    })
-}
-
 function getEditUser (req, res) {
     const parsedUrl = url.parse(req.url);
     let userName = parsedUrl.pathname.split("/")[1];
 
     //Get the Users Image File
     let imgSrc = "";
-
     fs.readdir(imgDir, (err, files) => {
-        console.log("getUser userName: " + userName);
-
-        //let regex = new RegExp("#" + userName + "#");
-        //console.log("getUser regex: " + regex);
-
         const file = files.find(f => f.startsWith(userName));
-        console.log("getUser file: " + file);
-
         imgSrc = file ? `/images/${file.toLowerCase()}` : "";
-        console.log("getUser imgSrc: " + imgSrc + "\n");
     });
 
     fs.readFile(dataDir + parsedUrl.pathname.split("/")[1] + '.json', 'utf8', (err, data) => {
@@ -297,14 +196,9 @@ function getEditUser (req, res) {
 function getImageView (req, res) {
     const parsedUrl = url.parse(req.url);
     let imageName = parsedUrl.pathname.split("/")[2];
-    console.log("getImageView userName: " + imageName);
     fs.readdir(imgDir, (err, files) => {
-
         const file = files.find(f => f.startsWith(imageName));
-        console.log("getImageView file: " + file);
-
         let imgSrc = file ? `/images/${file.toLowerCase()}` : "";
-        console.log("getImageView imgSrc: " + imgSrc + "\n");
 
         res.setHeader('Content-Type', 'text/html');
         res.write(layout({ title: "Profile Picture", bodyPartial: 'image-view', imgSrc: imgSrc}));
@@ -313,44 +207,10 @@ function getImageView (req, res) {
     });
 }
 
-function getImageUploadForm (req, res) {
-    res.setHeader('Content-Type', 'text/html');
-    res.statusCode = 200;
-    res.write(layout({ title: "Bild hochladen", bodyPartial: 'image-upload-form' }));
-    res.end();
-}
-
-function postImageUploadForm (req, res) {
-    const form = new formidable.IncomingForm();
-    form.keepExtensions = true;
-    form.uploadDir = imgDir;
-
-    form.parse(req, (err, fields, files) => {
-        if (err) throw err;
-        const fileName = files.imagefile.name;
-        const currentPath = files.imagefile.path;
-        fs.renameSync(currentPath, form.uploadDir + "image" + getFileExt(fileName).toLowerCase());
-
-        // Post-Redirect-Get pattern
-        res.statusCode = 303;
-        res.setHeader('Location', '/images');
-        res.end();
-    });
-}
-
 function getImage (req, res) {
     const parsedUrl = url.parse(req.url);
-    //let imageName = parsedUrl.pathname.split("/")[2];
-    //console.log("getImage imageName: " + imageName);
-    // Hint: due to our routing configuration we assume that path ends in
-    // something along the lines of 'image.jpg'.
-    //const result = /[a-zA-Z]*\.(jpg|jpeg|png)$/.exec(parsedUrl.pathname);
-
     const fileName = parsedUrl.pathname.split("/")[2];
-    console.log("getImage fileName: " + fileName);
-
     const fileExt = fileName.split(".")[1];
-    console.log("getImage fileExt: " + fileExt);
 
     if (fileName) {
         fs.readFile(imgDir + "/" + fileName, '', (err, data) => {
@@ -403,13 +263,8 @@ function get500 (req, res, err) {
     res.end();
 }
 
-
 // --------------
 // View Templates
-//
-// Note: advanced usage of partials that allows us to inject a partial by name. For
-// further information see http://handlebarsjs.com/partials.html. What we accomplish is
-// a nice way to avoid code duplication.
 const layout = hbs.compile(`<!DOCTYPE html>
     <html lang="en">
         <head>
@@ -476,40 +331,26 @@ hbs.registerPartial('homepage',
     `<h1>UE3 about.me clone</h1>
      <p>Create a page to present who you are and what you do in one link.</p>
      <ul>
-        <li><a href="/old-homepage">Alte Homepage</a></li>  <!-- //delete -->
         <li><a href="/new">Profil anlegen</a></li>
-     </ul>`);
-
-//delete
-hbs.registerPartial('oldHomepage',
-    `<h1>UE3 Sample Server</h1>
-     <ul>
-        <li><a href="/simple-form">Einfaches Formular</a></li>
-        <li><a href="/persist-data">Formulardaten speichern</a></li>
-        <li><a href="/persisted-data">Gespeicherte Formulardaten</a></li>
-        <li><a href="/einfaches-html-form">Redirect Beispiel</a> 
-            <span class="subtle small">Bitte Browser-Weiterleitung im Netzwerk-Tab der Browser Devtools betrachten</span>
-        </li>
-        <li><a href="/image">Bildanzeige (File Upload)</a></li>
      </ul>`);
 
 hbs.registerPartial('simple-html-form',
     `<h1>{{title}}</h1>
-     <form action="{{action}}" method="post" enctype="multipart/form-data">
+    <form action="{{action}}" method="post" enctype="multipart/form-data">
         <p><label>Benutzerkürzel: <input type="text" name="nickname"></label></p> 
-         <p><label>Vorname: <input type="text" name="firstname"></label></p>     
-         <p><label>Nachname: <input type="text" name="lastname"></label></p> 
-          <p><textarea name="description" rows="10" cols="60">Fügen Sie hier Ihre Beschreibung ein.</textarea></p>
-          <p><label>Facebook Link: <input type="text" name="fblink"></label></p> 
-          <p><label>Twitter  Link: <input type="text" name="twlink"></label></p> 
-          <p><label>Xing Link: <input type="text" name="xilink"></label></p>   
-         <p><label>Bild: 
-                <input type="file" accept="image/jpeg, image/png" name="imagefile">
-            </label>
-          </p>
-         <p class="subtle small">Erlaubte Bildformate: JPEG und PNG!</p>         
-         <p><button type="submit">Absenden</button></p>     
-     </form>`);
+        <p><label>Vorname: <input type="text" name="firstname"></label></p>     
+        <p><label>Nachname: <input type="text" name="lastname"></label></p> 
+        <p><textarea name="description" rows="10" cols="60">Fügen Sie hier Ihre Beschreibung ein.</textarea></p>
+        <p><label>Facebook Link: <input type="text" name="fblink"></label></p> 
+        <p><label>Twitter  Link: <input type="text" name="twlink"></label></p> 
+        <p><label>Xing Link: <input type="text" name="xilink"></label></p>   
+        <p><label>Bild: 
+            <input type="file" accept="image/jpeg, image/png" name="imagefile">
+        </label>
+        </p>
+        <p class="subtle small">Erlaubte Bildformate: JPEG und PNG!</p>         
+        <p><button type="submit">Absenden</button></p>     
+    </form>`);
 
 hbs.registerPartial('edit-form',
     `<h1>{{title}}</h1>
@@ -531,18 +372,6 @@ hbs.registerPartial('edit-form',
         <p><button type="submit">Absenden</button></p>     
      </form>`);
 
-hbs.registerPartial('simple-html-form-success',
-    `<h1>Vielen Dank!</h1>
-     <p>Folgende Antwort erhalten</p>
-     <p>{{requestBody}}</p>
-     <p>Weiter geht's <a href="{{resourceUri}}">hier</a>.</p>
-     <p class="subtle small">Anmerkung zur Benutzung von formidable zum Verarbeiten des Form-Inhalts. Ein request Objekt in 
-       node.js ist ein so genannter ReadableStream. Mit Event Listener auf die Events 'readable' und 'end' ließe
-       sich der Inhalt des Request Bodys einlesen. Danach müsste man aber den Body noch mit dem richtigen Format
-       parsen. Das ist eine typische Aufgabe eines Webframeworks wie express.js und unsere Aufgabe soll es nicht sein,
-       Teile eines eigenen Webframeworks zu entwickeln.
-     </p>`);
-
 hbs.registerPartial('persist-data-form-success',
     `<h1>Your account has been added!</h1>
      <p>Link to your newly created <a href="{{resourceUri}}">userprofile</a>.</p>`);
@@ -561,18 +390,6 @@ hbs.registerPartial('persisted-data',
      {{/each}}     
      </ul>
      <p><a href="{{nickname}}/edit">Edit &raquo;</a></p>`);
-
-
-hbs.registerPartial('image-upload-form',
-    `<h1>{{title}}</h1>
-     <form action="/image/upload" method="post" enctype="multipart/form-data">
-         <p><label>Bild: 
-                <input type="file" accept="image/jpeg, image/png" name="imagefile">
-            </label>
-          </p>
-         <p class="subtle small">Erlaubte Bildformate: JPEG und PNG!</p>     
-         <p><button type="submit">Bild hochladen</button></p>     
-     </form>`);
 
 hbs.registerPartial('image-view',
     `<h1>{{title}}</h1>
